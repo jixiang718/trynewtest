@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>点菜推荐助手</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="hero">
+        <h1>点菜推荐助手</h1>
+        <p>上传菜单截图，结合你的口味、预算与忌口，快速获得推荐菜品。</p>
+      </header>
+
+      <section class="card">
+        <form method="post" enctype="multipart/form-data" class="form-grid">
+          <label class="field">
+            <span>菜单截图</span>
+            <input type="file" name="menu_image" accept="image/*" required />
+          </label>
+
+          <label class="field">
+            <span>口味偏好</span>
+            <input
+              type="text"
+              name="tastes"
+              placeholder="例如：辣、麻、清淡、鸡"
+            />
+          </label>
+
+          <label class="field">
+            <span>必点食材</span>
+            <input
+              type="text"
+              name="must_include"
+              placeholder="例如：牛、虾、豆腐"
+            />
+          </label>
+
+          <label class="field">
+            <span>不吃/忌口</span>
+            <input
+              type="text"
+              name="avoid"
+              placeholder="例如：花生、香菜"
+            />
+          </label>
+
+          <label class="field">
+            <span>最低价格</span>
+            <input type="number" name="min_price" min="0" step="1" />
+          </label>
+
+          <label class="field">
+            <span>最高价格</span>
+            <input type="number" name="max_price" min="0" step="1" />
+          </label>
+
+          <button type="submit" class="primary">生成推荐</button>
+        </form>
+      </section>
+
+      {% if message %}
+      <section class="notice">{{ message }}</section>
+      {% endif %}
+
+      {% if recommendations is not none %}
+      <section class="results">
+        <h2>推荐菜品</h2>
+        {% if recommendations %}
+        <ul class="cards">
+          {% for item in recommendations %}
+          <li class="result-card">
+            <div>
+              <h3>{{ item.name }}</h3>
+              <p class="tags">
+                {% if item.tags %}
+                {% for tag in item.tags %}
+                <span>{{ tag }}</span>
+                {% endfor %}
+                {% else %}
+                <span>通用口味</span>
+                {% endif %}
+              </p>
+            </div>
+            <div class="price">¥{{ '%.0f' | format(item.price) }}</div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p>暂未找到符合条件的菜品。</p>
+        {% endif %}
+      </section>
+      {% endif %}
+
+      {% if raw_text_preview %}
+      <section class="card preview">
+        <h2>识别结果预览</h2>
+        <pre>{{ raw_text_preview }}</pre>
+      </section>
+      {% endif %}
+    </main>
+  </body>
+</html>
