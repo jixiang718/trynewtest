@@ -52,7 +52,33 @@ def extract_text_with_openai(image_bytes: bytes) -> tuple[str, str | None]:
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    payload = {
+    responses_payload = {
+        "model": "gpt-4o-mini",
+        "input": [
+            {
+                "role": "system",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "你是菜单 OCR 助手，只输出菜单文本原文，不要添加解释。",
+                    }
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "请提取图片中的菜单文本。"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{encoded}"},
+                    },
+                ],
+            },
+        ],
+        "max_output_tokens": 1200,
+        "temperature": 0,
+    }
+    chat_payload = {
         "model": "gpt-4o-mini",
         "messages": [
             {
@@ -77,22 +103,38 @@ def extract_text_with_openai(image_bytes: bytes) -> tuple[str, str | None]:
     }
     try:
         response = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            json=payload,
+            "https://api.openai.com/v1/responses",
+            json=responses_payload,
             headers=headers,
-            timeout=30,
+            timeout=45,
         )
         response.raise_for_status()
+        data = response.json()
+        content = data.get("output_text", "").strip()
     except requests.RequestException:
-        return "", "OCR 服务请求失败，请稍后再试或改用手动输入。"
-
-    data = response.json()
-    content = (
-        data.get("choices", [{}])[0]
-        .get("message", {})
-        .get("content", "")
-        .strip()
-    )
+        try:
+            response = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                json=chat_payload,
+                headers=headers,
+                timeout=45,
+            )
+            response.raise_for_status()
+            data = response.json()
+            content = (
+                data.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+                .strip()
+            )
+        except requests.RequestException as exc:
+            status = getattr(exc.response, "status_code", None)
+            if status:
+                return (
+                    "",
+                    f"OCR 服务请求失败（HTTP {status}），请稍后再试或改用手动输入。",
+                )
+            return "", "OCR 服务请求失败，请稍后再试或改用手动输入。"
     if not content:
         return "", "OCR 服务未返回有效文本，请改用手动输入。"
     return content, None
