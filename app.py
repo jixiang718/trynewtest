@@ -39,9 +39,23 @@ TASTE_KEYWORDS = {
 }
 
 
-def extract_text(image_bytes: bytes) -> str:
-    image = Image.open(io.BytesIO(image_bytes))
-    return pytesseract.image_to_string(image, lang="chi_sim+eng")
+def extract_text(image_bytes: bytes) -> tuple[str, str | None]:
+    try:
+        image = Image.open(io.BytesIO(image_bytes))
+    except OSError:
+        return "", "无法读取图片，请确认上传的是有效的图片文件。"
+
+    try:
+        text = pytesseract.image_to_string(image, lang="chi_sim+eng")
+    except pytesseract.TesseractNotFoundError:
+        return (
+            "",
+            "OCR 服务未就绪：服务器未安装 Tesseract。请联系部署者安装后重试。",
+        )
+    except RuntimeError:
+        return "", "OCR 处理失败，请尝试更清晰的图片或稍后再试。"
+
+    return text, None
 
 
 def derive_tags(name: str) -> tuple[str, ...]:
@@ -128,8 +142,10 @@ def index():
         if not uploaded or uploaded.filename == "":
             message = "请先上传菜单截图。"
         else:
-            raw_text = extract_text(uploaded.read())
-            if not raw_text.strip():
+            raw_text, error_message = extract_text(uploaded.read())
+            if error_message:
+                message = error_message
+            elif not raw_text.strip():
                 message = "没有识别到菜单内容，请换一张更清晰的截图再试。"
             else:
                 items = parse_menu(raw_text)
