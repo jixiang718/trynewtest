@@ -17,7 +17,16 @@
         <form method="post" enctype="multipart/form-data" class="form-grid">
           <label class="field">
             <span>菜单截图</span>
-            <input type="file" name="menu_image" accept="image/*" required />
+            <input type="file" name="menu_image" accept="image/*" />
+          </label>
+
+          <label class="field full-width">
+            <span>手动输入菜单（可选）</span>
+            <textarea
+              name="menu_text"
+              rows="4"
+              placeholder="如果 OCR 无法使用，可直接粘贴菜单文字，例如：\n宫保鸡丁 38\n酸辣土豆丝 22"
+            ></textarea>
           </label>
 
           <label class="field">

@@ -138,37 +138,44 @@ def index():
     raw_text = ""
 
     if request.method == "POST":
+        manual_text = request.form.get("menu_text", "").strip()
         uploaded = request.files.get("menu_image")
-        if not uploaded or uploaded.filename == "":
-            message = "请先上传菜单截图。"
+        if manual_text:
+            raw_text = manual_text
+        elif not uploaded or uploaded.filename == "":
+            message = "请上传菜单截图或手动输入菜单文字。"
         else:
             raw_text, error_message = extract_text(uploaded.read())
             if error_message:
-                message = error_message
+                message = f"{error_message} 你也可以改用手动输入菜单文字。"
             elif not raw_text.strip():
                 message = "没有识别到菜单内容，请换一张更清晰的截图再试。"
-            else:
-                items = parse_menu(raw_text)
-                if not items:
-                    message = "没有解析出菜品和价格，请尝试更清晰的截图或裁剪后再上传。"
+
+        if raw_text and not message:
+            items = parse_menu(raw_text)
+            if not items:
+                if manual_text:
+                    message = "没有解析出菜品和价格，请检查输入的菜单格式。"
                 else:
-                    tastes = normalize_keywords(request.form.get("tastes", ""))
-                    must_include = normalize_keywords(request.form.get("must_include", ""))
-                    avoid = normalize_keywords(request.form.get("avoid", ""))
-                    min_price = request.form.get("min_price")
-                    max_price = request.form.get("max_price")
-                    min_price_value = float(min_price) if min_price else None
-                    max_price_value = float(max_price) if max_price else None
-                    recommendations = recommend_items(
-                        items,
-                        tastes=tastes,
-                        must_include=must_include,
-                        avoid=avoid,
-                        min_price=min_price_value,
-                        max_price=max_price_value,
-                    )
-                    if not recommendations:
-                        message = "暂时没有符合条件的菜品，请调整口味或价格范围。"
+                    message = "没有解析出菜品和价格，请尝试更清晰的截图或裁剪后再上传。"
+            else:
+                tastes = normalize_keywords(request.form.get("tastes", ""))
+                must_include = normalize_keywords(request.form.get("must_include", ""))
+                avoid = normalize_keywords(request.form.get("avoid", ""))
+                min_price = request.form.get("min_price")
+                max_price = request.form.get("max_price")
+                min_price_value = float(min_price) if min_price else None
+                max_price_value = float(max_price) if max_price else None
+                recommendations = recommend_items(
+                    items,
+                    tastes=tastes,
+                    must_include=must_include,
+                    avoid=avoid,
+                    min_price=min_price_value,
+                    max_price=max_price_value,
+                )
+                if not recommendations:
+                    message = "暂时没有符合条件的菜品，请调整口味或价格范围。"
 
     return render_template(
         "index.html",

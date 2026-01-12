@@ -54,6 +54,18 @@ body {
   font-size: 0.95rem;
 }
 
+.field textarea {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d7dbea;
+  font-size: 0.95rem;
+  resize: vertical;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
 .primary {
   padding: 12px 18px;
   border: none;

@@ -23,6 +23,6 @@ python app.py
 1. 确保根目录包含 `vercel.json` 与 `api/index.py`。
 2. 在 Vercel 新建项目并选择该仓库。
 3. 使用默认设置部署即可，根路径 `/` 会被重写到 `/api/index`。
-4. 部署环境需要安装 Tesseract OCR，否则上传图片后会提示 OCR 未就绪。
+4. 部署环境需要安装 Tesseract OCR，否则可改用手动输入菜单文字。
 
 > 识别效果依赖于图片清晰度与 OCR 环境，推荐上传裁剪清晰的菜单截图。
