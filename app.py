@@ -4,6 +4,7 @@ import base64
 import io
 import os
 import re
+import time
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -102,24 +103,20 @@ def extract_text_with_openai(image_bytes: bytes) -> tuple[str, str | None]:
         "temperature": 0,
     }
     try:
-        response = requests.post(
+        response = _post_openai_with_retries(
             "https://api.openai.com/v1/responses",
-            json=responses_payload,
-            headers=headers,
-            timeout=45,
+            responses_payload,
+            headers,
         )
-        response.raise_for_status()
         data = response.json()
         content = data.get("output_text", "").strip()
     except requests.RequestException:
         try:
-            response = requests.post(
+            response = _post_openai_with_retries(
                 "https://api.openai.com/v1/chat/completions",
-                json=chat_payload,
-                headers=headers,
-                timeout=45,
+                chat_payload,
+                headers,
             )
-            response.raise_for_status()
             data = response.json()
             content = (
                 data.get("choices", [{}])[0]
@@ -129,6 +126,11 @@ def extract_text_with_openai(image_bytes: bytes) -> tuple[str, str | None]:
             )
         except requests.RequestException as exc:
             status = getattr(exc.response, "status_code", None)
+            if status == 429:
+                return (
+                    "",
+                    "OCR 服务请求过于频繁（HTTP 429）。请稍后再试或改用手动输入。",
+                )
             if status:
                 return (
                     "",
@@ -138,6 +140,35 @@ def extract_text_with_openai(image_bytes: bytes) -> tuple[str, str | None]:
     if not content:
         return "", "OCR 服务未返回有效文本，请改用手动输入。"
     return content, None
+
+
+def _post_openai_with_retries(
+    url: str,
+    payload: dict,
+    headers: dict,
+    *,
+    retries: int = 2,
+    timeout: int = 45,
+) -> requests.Response:
+    last_exc: requests.RequestException | None = None
+    for attempt in range(retries + 1):
+        try:
+            response = requests.post(
+                url,
+                json=payload,
+                headers=headers,
+                timeout=timeout,
+            )
+            response.raise_for_status()
+            return response
+        except requests.RequestException as exc:
+            last_exc = exc
+            status = getattr(exc.response, "status_code", None)
+            if status == 429 and attempt < retries:
+                time.sleep(1.5 * (attempt + 1))
+                continue
+            raise
+    raise last_exc if last_exc else requests.RequestException("请求失败")
 
 
 def extract_text(image_bytes: bytes) -> tuple[str, str | None]:
